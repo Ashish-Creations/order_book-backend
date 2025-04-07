@@ -5,6 +5,7 @@ import twilio from "twilio";
 import cron from "node-cron";
 import { db } from "./firebase";
 import { sendWhatsAppMessage } from "./twilio";
+import { addOrder, updateOrderStep, getOrderStatus } from "./orders";
 
 config();
 const app = express();
@@ -21,14 +22,66 @@ app.post("/webhook", async (req, res) => {
   const { Body, From } = req.body;
   console.log(`Received: ${Body} from ${From}`);
 
-  // Example response
-  await client.messages.create({
-    from: process.env.TWILIO_WHATSAPP_NUMBER!,
-    to: From,
-    body: `Got your message: "${Body}"!`,
-  });
+  try {
+    const message = Body.trim();
 
-  res.sendStatus(200);
+    // 🟢 Create new order
+    if (message.startsWith("New Order")) {
+      const match = message.match(/#(\d+), Client:\s*(.*), Product:\s*(.*)/i);
+      if (match) {
+        const orderId = match[1];
+        const clientName = match[2].trim();
+        const product = match[3].trim();
+
+        await addOrder(orderId, From, product); // store phone number as customer
+        await sendWhatsAppMessage(From, `✅ Order #${orderId} for "${product}" has been added.`);
+      } else {
+        await sendWhatsAppMessage(From, "⚠️ Couldn't parse the order. Please use: New Order: #ID, Client: Name, Product: Item");
+      }
+    }
+
+    // 🟡 Update order step
+    else if (message.startsWith("Update Order")) {
+      const match = message.match(/#(\d+), Step:\s*(\d+)/i);
+      if (match) {
+        const orderId = match[1];
+        const step = parseInt(match[2]);
+
+        await updateOrderStep(orderId, step);
+        await sendWhatsAppMessage(From, `✅ Order #${orderId} updated to Step ${step}.`);
+      } else {
+        await sendWhatsAppMessage(From, "⚠️ Couldn't parse the update. Please use: Update Order: #ID, Step: Number");
+      }
+    }
+
+    // 🔵 Check order status
+    else if (message.startsWith("Status")) {
+      const match = message.match(/#(\d+)/);
+      if (match) {
+        const orderId = match[1];
+        const order = await getOrderStatus(orderId);
+
+        if (order) {
+          await sendWhatsAppMessage(From, `📦 Order #${orderId}\nProduct: ${order.product}\nCurrent Step: ${order.status}`);
+        } else {
+          await sendWhatsAppMessage(From, `❌ No order found with ID #${orderId}`);
+        }
+      } else {
+        await sendWhatsAppMessage(From, "⚠️ Couldn't find an order ID. Please use: Status #ID");
+      }
+    }
+
+    // ❓ Unknown message
+    else {
+      await sendWhatsAppMessage(From, `🤖 I didn't understand that.\nYou can try:\n• New Order: #123, Client: Name, Product: Item\n• Update Order: #123, Step: 4\n• Status #123`);
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Webhook error:", err);
+    await sendWhatsAppMessage(From, "⚠️ Something went wrong while processing your request.");
+    res.sendStatus(500);
+  }
 });
 
 // Daily 9 AM cron job to send reminders
