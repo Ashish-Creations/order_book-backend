@@ -1,12 +1,12 @@
-import { db } from "./firabase";
+import { db } from "./firebase";
 
 // Add a new order
 export const addOrder = async (orderId: string, clientName: string, product: string) => {
   await db.collection("orders").doc(orderId).set({
     clientName,
     product,
-    status: 1, // Start at Step 1
-    updatedAt: new Date()
+    status: 1,
+    updatedAt: new Date(),
   });
 };
 
@@ -14,7 +14,7 @@ export const addOrder = async (orderId: string, clientName: string, product: str
 export const updateOrderStep = async (orderId: string, step: number) => {
   await db.collection("orders").doc(orderId).update({
     status: step,
-    updatedAt: new Date()
+    updatedAt: new Date(),
   });
 };
 
