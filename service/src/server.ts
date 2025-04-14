@@ -97,5 +97,23 @@ cron.schedule("0 9 * * *", async () => {
   });
 });
 
+//test message endpoint
+
+app.post("/test-message", async (req, res) => {
+  try {
+    const { to, message } = req.body;
+
+    if (!to || !message) {
+      return res.status(400).json({ error: "Please provide 'to' and 'message' in the body." });
+    }
+
+    await sendWhatsAppMessage(to, message);
+    res.status(200).json({ success: true, message: "Message sent via WhatsApp!" });
+  } catch (err) {
+    console.error("Error sending test message:", err);
+    res.status(500).json({ error: "Failed to send message" });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
