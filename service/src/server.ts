@@ -115,5 +115,27 @@ app.post("/test-message", async (req, res) => {
   }
 });
 
+app.get("/test-db", async (req, res) => {
+  try {
+    // Write test data
+    const testRef = db.collection("test").doc("connection-check");
+    await testRef.set({
+      timestamp: new Date(),
+      message: "Database connection successful",
+    });
+
+    // Read back the data
+    const doc = await testRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: "Test document not found" });
+    }
+
+    res.status(200).json({ success: true, data: doc.data() });
+  } catch (err) {
+    console.error("Firestore test error:", err);
+    res.status(500).json({ error: "Failed to connect to Firestore" });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
