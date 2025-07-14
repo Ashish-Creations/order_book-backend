@@ -46,6 +46,79 @@ const generateOrderNumber = async () => {
   }
 };
 
+// Function to get stage name by stage number
+const getStageName = (stageNumber: number) => {
+  const stageNames = [
+    "Inquiry",
+    "Requirements Analysis", 
+    "Proposal",
+    "Contract Review",
+    "Development Planning",
+    "Implementation",
+    "Testing",
+    "Deployment",
+    "Completion"
+  ];
+  return stageNames[stageNumber - 1] || "Unknown Stage";
+};
+
+// Function to send daily pending orders notification
+const sendDailyPendingOrdersNotification = async () => {
+  try {
+    console.log("Running daily pending orders notification...");
+    
+    // Get all orders from database
+    const snapshot = await db.collection("orders").get();
+    const orders = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Filter orders by status
+    const inProgressOrders = orders.filter((order: any) => order.status === "in-progress");
+    const paymentPendingOrders = orders.filter((order: any) => order.status === "payment-pending");
+
+    // Build message
+    let message = "📋 *Daily Pending Orders Report*\n\n";
+    
+    if (inProgressOrders.length > 0) {
+      message += "🔄 *In-progress Orders:*\n";
+      inProgressOrders.forEach((order: any) => {
+        const stageName = getStageName(order.currentStage);
+        message += `• ${order.companyName || "Unknown Company"} - ${stageName}\n`;
+      });
+      message += "\n";
+    } else {
+      message += "🔄 *In-progress Orders:* None\n\n";
+    }
+
+    if (paymentPendingOrders.length > 0) {
+      message += "💰 *Payment Pending Orders:*\n";
+      paymentPendingOrders.forEach((order: any) => {
+        const stageName = getStageName(order.currentStage);
+        message += `• ${order.companyName || "Unknown Company"} - ${stageName}\n`;
+      });
+    } else {
+      message += "💰 *Payment Pending Orders:* None\n";
+    }
+
+    // Send WhatsApp message
+    const whatsappNumber = process.env.WHATSAPP_RECIPIENT_NUMBER || "+17828826459";
+    await sendWhatsAppMessage(`whatsapp:${whatsappNumber}`, message);
+    console.log("Daily pending orders notification sent successfully");
+  } catch (err) {
+    console.error("Error sending daily pending orders notification:", err);
+  }
+};
+
+// Schedule daily notification at 9 AM IST (3:30 AM UTC)
+// IST is UTC+5:30, so 9 AM IST = 3:30 AM UTC
+cron.schedule('30 3 * * *', sendDailyPendingOrdersNotification, {
+  timezone: "UTC"
+});
+
+console.log("Daily notification scheduled for 9 AM IST (3:30 AM UTC)");
+
 // Endpoint to get next order number
 app.get("/next-order-number", async (req, res) => {
   try {
@@ -117,7 +190,8 @@ app.post("/complete-order", async (req, res) => {
     });
     // Send WhatsApp message
     const message = `Order #${orderId} is now complete!\nCompany: ${order.companyName || order.clientName}\nProduct: ${order.product}`;
-    await sendWhatsAppMessage('whatsapp:+17828826459', message); // always send to your number
+    const whatsappNumber = process.env.WHATSAPP_RECIPIENT_NUMBER || "+17828826459";
+    await sendWhatsAppMessage(`whatsapp:${whatsappNumber}`, message); // always send to your number
     res.status(200).json({ success: true, message: "Order completed and WhatsApp message sent!" });
   } catch (err) {
     console.error("/complete-order error:", err);
@@ -248,6 +322,17 @@ app.get("/orders/:orderId", async (req, res) => {
   } catch (err) {
     console.error("/orders/:orderId GET error:", err);
     res.status(500).json({ error: "Failed to fetch order" });
+  }
+});
+
+// Manual endpoint to test daily notification
+app.post("/test-daily-notification", async (req, res) => {
+  try {
+    await sendDailyPendingOrdersNotification();
+    res.status(200).json({ success: true, message: "Daily notification test sent!" });
+  } catch (err) {
+    console.error("Test daily notification error:", err);
+    res.status(500).json({ error: "Failed to send test notification" });
   }
 });
 
