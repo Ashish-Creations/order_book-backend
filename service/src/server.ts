@@ -142,7 +142,7 @@ app.post("/test-message", async (req, res) => {
     if (!to || !message) {
       return res.status(400).json({ error: "Please provide 'to' and 'message' in the body." });
     }
-
+    console.log("Sending test message to:", to);
     await sendWhatsAppMessage(to, message);
     res.status(200).json({ success: true, message: "Message sent via WhatsApp!" });
   } catch (err) {
