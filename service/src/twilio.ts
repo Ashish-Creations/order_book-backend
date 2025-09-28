@@ -16,10 +16,18 @@ export const sendWhatsAppMessage = async (to: string, message: string) => {
       body: message,
     });
 
-    console.log('✅ WhatsApp message sent. SID:', msg.sid, 'Status:', msg.status);
+    console.log(
+      "✅ WhatsApp message sent. SID:",
+      msg.sid,
+      "Status:",
+      msg.status
+    );
     return msg;
   } catch (error: any) {
-    console.error('❌ Failed to send WhatsApp message:', error.message || error);
+    console.error(
+      "❌ Failed to send WhatsApp message:",
+      error.message || error
+    );
     throw error;
   }
 };

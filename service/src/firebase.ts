@@ -3,7 +3,14 @@ import { config } from "dotenv";
 
 config();
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS!);
+// Load Firebase credentials from the JSON file
+import path from "path";
+const serviceAccountPath = path.join(__dirname, "../serviceAccountKey.json");
+const serviceAccount = require(serviceAccountPath);
+
+console.log(
+  "Firebase credentials loaded successfully from serviceAccountKey.json"
+);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
