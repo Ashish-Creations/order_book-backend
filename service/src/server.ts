@@ -1,7 +1,6 @@
 import express from "express";
 import { config } from "dotenv";
 import bodyParser from "body-parser";
-import twilio from "twilio";
 import cron from "node-cron";
 import { db } from "./firebase";
 import { sendWhatsAppMessage } from "./twilio";
@@ -27,11 +26,6 @@ app.use((req, res, next) => {
     next();
   }
 });
-
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID!,
-  process.env.TWILIO_AUTH_TOKEN!
-);
 
 // Function to generate next order number
 const generateOrderNumber = async () => {
@@ -68,7 +62,9 @@ const generateStageSummary = (formData: any, currentStage: number) => {
 
   let summary = "Current Summary:\n";
 
-  for (let stage = 1; stage <= currentStage; stage++) {
+  // Generate summary for completed stages only (currentStage - 1)
+  const completedStages = currentStage - 1;
+  for (let stage = 1; stage <= completedStages; stage++) {
     const stageName = stageNames[stage - 1];
     summary += `Stage ${stage}: ${stageName}\n`;
 

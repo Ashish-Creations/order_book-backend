@@ -1,4 +1,7 @@
 **/node_modules
 **/build
 .env
+.env.local
+.env.production
+.env.development
 serviceAccountKey.json
